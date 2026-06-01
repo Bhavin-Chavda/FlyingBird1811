@@ -51,7 +51,7 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await login({ username, password });
-      setAuth(response.token, { username: response.username, role: response.role });
+      setAuth(response.token);
       showSuccess(`${response.username} logged in successfully`);
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {

@@ -18,7 +18,13 @@ export interface ErrorResponseDto {
   errorCode: string;
 }
 
-export interface User {
+export interface UserDetailsRequestDto {
+  username: string;
+}
+
+export interface UserDetailsResponseDto {
+  id: number;
   username: string;
   role: string;
+  enabled: boolean;
 }

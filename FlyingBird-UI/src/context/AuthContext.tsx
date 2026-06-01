@@ -1,51 +1,66 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { User } from '../types/auth';
-import { isTokenValid, logout as authLogout } from '../services/authService';
+import type { UserDetailsResponseDto } from '../types/auth';
+import {
+  isTokenValid,
+  logout as authLogout,
+  getUserDetails,
+  getUsernameFromToken,
+} from '../services/authService';
 import { markManualLogout } from '../services/api';
 
 interface AuthContextType {
-  user: User | null;
+  userDetails: UserDetailsResponseDto | null;
   isAuthenticated: boolean;
-  setAuth: (token: string, user: User) => void;
+  setAuth: (token: string) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [userDetails, setUserDetails]       = useState<UserDetailsResponseDto | null>(null);
+  // Initialise from localStorage so page-refresh keeps the user authenticated.
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => isTokenValid());
 
+  // On page load/refresh: if a valid token exists, fetch user details in the background.
   useEffect(() => {
-    if (isTokenValid()) {
-      const storedUsername = localStorage.getItem('userUsername');
-      const storedRole     = localStorage.getItem('userRole');
-      if (storedUsername) {
-        setUser({ username: storedUsername, role: storedRole || '' });
-      }
+    if (!isTokenValid()) return;
+    const username = getUsernameFromToken();
+    if (username) {
+      getUserDetails(username)
+        .then(details => setUserDetails(details))
+        .catch(() => {
+          authLogout();
+          setIsAuthenticated(false);
+        });
     } else {
       authLogout();
-      localStorage.removeItem('userUsername');
-      localStorage.removeItem('userRole');
+      setIsAuthenticated(false);
     }
   }, []);
 
-  const setAuth = useCallback((token: string, userData: User) => {
-    localStorage.setItem('token',       token);
-    localStorage.setItem('userUsername', userData.username);
-    localStorage.setItem('userRole',     userData.role);
-    setUser(userData);
+  // Store token and mark authenticated; fetch user details in the background.
+  // Caller (LoginPage) can navigate immediately without waiting for the details API.
+  const setAuth = useCallback((token: string) => {
+    localStorage.setItem('token', token);
+    setIsAuthenticated(true);
+    const username = getUsernameFromToken();
+    if (username) {
+      getUserDetails(username)
+        .then(details => setUserDetails(details))
+        .catch(() => { /* token is valid; details will populate on next attempt */ });
+    }
   }, []);
 
   const logout = useCallback(() => {
     markManualLogout();
     authLogout();
-    localStorage.removeItem('userUsername');
-    localStorage.removeItem('userRole');
-    setUser(null);
+    setUserDetails(null);
+    setIsAuthenticated(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, setAuth, logout }}>
+    <AuthContext.Provider value={{ userDetails, isAuthenticated, setAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );

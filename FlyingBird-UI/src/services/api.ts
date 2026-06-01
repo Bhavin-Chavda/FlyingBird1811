@@ -24,8 +24,6 @@ api.interceptors.response.use(
     const isLoginRequest = error.config?.url?.includes('/auth/login');
     if (error.response?.status === 401 && !isLoginRequest && !_manualLogout) {
       localStorage.removeItem('token');
-      localStorage.removeItem('userUsername');
-      localStorage.removeItem('userRole');
       const msg = error.response?.data?.message || 'Session expired. Please login again.';
       window.location.href = `/login?error=${encodeURIComponent(msg)}`;
     }

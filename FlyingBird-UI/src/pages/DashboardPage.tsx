@@ -27,7 +27,7 @@ const NAV_ITEMS = [
 ];
 
 const DashboardPage: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { userDetails, logout } = useAuth();
   const { showSuccess } = useToast();
   const navigate = useNavigate();
 
@@ -99,7 +99,7 @@ const DashboardPage: React.FC = () => {
             </div>
             {!collapsed && (
               <div className="sb-user-info">
-                <span className="sb-user-name">{user?.username}</span>
+                <span className="sb-user-name">{userDetails?.username}</span>
               </div>
             )}
           </button>
@@ -165,17 +165,25 @@ const DashboardPage: React.FC = () => {
                 <User size={32} />
               </div>
               <div className="modal-field">
+                <span className="modal-field-label">ID</span>
+                <span className="modal-field-value">{userDetails?.id ?? '—'}</span>
+              </div>
+              <div className="modal-field">
                 <span className="modal-field-label">Username</span>
-                <span className="modal-field-value">{user?.username || '—'}</span>
+                <span className="modal-field-value">{userDetails?.username || '—'}</span>
               </div>
               <div className="modal-field">
                 <span className="modal-field-label">Role</span>
                 <span className="modal-field-value">
                   <span className="modal-role-badge">
                     <Shield size={12} />
-                    {user?.role || '—'}
+                    {userDetails?.role || '—'}
                   </span>
                 </span>
+              </div>
+              <div className="modal-field">
+                <span className="modal-field-label">Status</span>
+                <span className="modal-field-value">{userDetails?.enabled ? 'Active' : 'Inactive'}</span>
               </div>
             </div>
           </div>
