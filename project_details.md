@@ -210,12 +210,12 @@ mvnw.cmd test
 | POST | `/api/users/userDetails` | JWT required | Get user details by username | `UserController` (path changed from `/users` to `/api/users` on 2026-06-01) |
 | GET | `/protected-test` | JWT required | Test JWT authentication | `AdminUtilityController` |
 | GET | `/admin-data` | JWT + ADMIN role | Admin-only data | `AdminUtilityController` |
-| POST | `/admin/update-role` | Public (dev only) | Update user role | `AdminUtilityController` |
+| POST | `/admin/update-role` | JWT + ADMIN role | Update user role (admin only) | `AdminUtilityController` |
 | GET | `/actuator/health` | Public | Health check | Spring Actuator |
 | GET | `/swagger-ui/**` | Public | Swagger UI | springdoc-openapi |
 | GET | `/v3/api-docs/**` | Public | OpenAPI docs | springdoc-openapi |
 
-Note: `/admin/update-role` is marked "for testing only" — should be secured or removed before production.
+Note: `/admin/update-role` is now ADMIN-only (`@PreAuthorize("hasRole('ADMIN')")`). `permitAll()` rule removed from `SecurityConfig`.
 
 ## Backend Package Patterns
 
@@ -394,7 +394,7 @@ Keep updates short, factual, and useful.
 
 | Issue | Area | Status | Notes |
 |---|---|---|---|
-| `/admin/update-role` is public | Backend | Open | Marked dev-only in code but not secured; must be removed or protected before production |
+| `/admin/update-role` is public | Backend | Resolved | Secured with `@PreAuthorize("hasRole('ADMIN')")` and `permitAll()` removed from SecurityConfig on 2026-06-01 |
 | No database migration tool | Backend | Open | DDL is `none`; schema exists in MySQL (`fly_db`) but is managed manually; no Flyway/Liquibase |
 | No frontend test script | Frontend | Open | `npm run test` does not exist in package.json |
 | Dashboard pages have no API calls yet | Frontend | In progress | `OverviewPage`, `JobsDetailsPage`, `TradesPage`, `HistoryPage`, `AnalyticsPage` are yet to be developed |

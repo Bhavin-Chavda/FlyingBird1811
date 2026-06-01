@@ -46,6 +46,8 @@ public class AdminUtilityController {
      * Usage: POST /admin/update-role?username=admin_user&role=ADMIN
      */
     @PostMapping("/admin/update-role")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
     public Map<String, String> updateUserRole(@RequestParam String username, @RequestParam String role) {
         log.info("Updating user role | username={} | newRole={}", username, role);
 
