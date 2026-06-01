@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
   jpa:
     hibernate:
@@ -11,3 +11,36 @@ spring:
   jwt:
     secret: "mySecretKeyForJWTTokenGenerationAndValidation12345678901234567890"
     expiration: 86400000  # 24 hours in milliseconds
+
+  # Batch jobs don't run in tests; skip schema init on H2
+  batch:
+    job:
+      enabled: false
+  sql:
+    init:
+      mode: never
+
+# Scheduler / market-data config (mirrors main application.yaml so the
+# per-job schedulers resolve cron in the test context).
+# Cron set to a once-a-year time so jobs do not fire during the test run.
+scheduler:
+  timezone: Asia/Kolkata
+  seed-on-startup: false   # do not hit Delta during tests
+  cron:
+    one-min: "0 0 0 1 1 *"
+    five-min: "0 0 0 1 1 *"
+    fifteen-min: "0 0 0 1 1 *"
+
+market:
+  delta-base-url: https://api.india.delta.exchange
+  symbol: BTCUSD
+  buffer-length: 300
+  seed-multiple: 10
+  fetch-timeout-ms: 15000
+  retry-attempts: 3
+  retry-backoff-ms: 1000
+
+notification:
+  email:
+    enabled: false
+    subject-prefix: "[FlyingBird] "

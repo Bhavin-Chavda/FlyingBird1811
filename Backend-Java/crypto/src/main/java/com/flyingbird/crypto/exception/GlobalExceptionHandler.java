@@ -288,6 +288,33 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle Job Not Found Exception
+     *
+     * Status: 404 Not Found
+     * Reason: Scheduler job with given jobId is not registered
+     *
+     * When to throw:
+     * - Client queries /api/scheduler/jobs/{jobId} with an unknown jobId
+     */
+    @ExceptionHandler(JobNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleJobNotFound(
+            JobNotFoundException ex,
+            WebRequest request) {
+
+        log.warn("Scheduler job not found: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .statusCode(HttpStatus.NOT_FOUND.value())
+                .error("NOT_FOUND")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .errorCode("JOB_001")
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    /**
      * Handle All Other Exceptions (Catch-all)
      *
      * Status: 500 Internal Server Error
