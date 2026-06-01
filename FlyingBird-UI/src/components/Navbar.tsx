@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { userDetails, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -21,7 +21,7 @@ const Navbar: React.FC = () => {
       <div className="navbar-right">
         <div className="nav-user">
           <User size={14} />
-          <span>{user?.username}</span>
+          <span>{userDetails?.username}</span>
         </div>
         <button className="btn-logout" onClick={handleLogout} title="Logout">
           <LogOut size={16} />

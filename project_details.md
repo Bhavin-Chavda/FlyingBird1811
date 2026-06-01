@@ -60,6 +60,7 @@ D:\Bhavin
         ProtectedRoute.tsx
       config/
         index.ts               exports BASE_URL from VITE_API_BASE_URL
+        jobs.ts                JOB_CONFIGS (3 jobs: id/timeframe/label)
       context/
         AuthContext.tsx
         ToastContext.tsx
@@ -75,8 +76,10 @@ D:\Bhavin
       services/
         api.ts                 axios instance with JWT interceptor
         authService.ts         login / logout / isTokenValid
+        jobService.ts          getJobDetails(timeframe) → /api/jobs/{tf}/details
       types/
         auth.ts                LoginRequestDto, AuthResponseDto, User, ErrorResponseDto
+        jobDetails.ts          JobDetailsResponseDto, JobStatusDto, CrossoverStateDto, Candle
       App.tsx
       main.tsx
     .env                       (contains VITE_API_BASE_URL — do not commit)
@@ -102,6 +105,7 @@ D:\Bhavin
               AdminUtilityController.java
               SchedulerStatusController.java  scheduler status + history APIs (thin)
               MarketDataController.java       per-job market read APIs (thin dispatch)
+              JobDetailsController.java       aggregate job-details API (thin) /api/jobs/{timeframe}/details
             dto/                              (auth/user DTOs only — scheduler DTOs live in scheduler/common)
             entity/  User.java
             exception/  ... JobNotFoundException.java
@@ -115,7 +119,9 @@ D:\Bhavin
                 SchedulerTimeUtils.java       stateless IST time helper
                 SchedulerConstants.java
                 JobStatusService.java / JobStatusServiceImpl.java   RW-locked LIVE status
-                JobStatusDto.java, JobExecutionDto.java, CrossoverStateDto.java
+                JobDetailsService.java / JobDetailsServiceImpl.java aggregate job details (status+crossover+last5)
+                JobStatusDto.java, JobExecutionDto.java, CrossoverStateDto.java, JobDetailsResponseDto.java
+                Timeframe.java, JobId.java, StringToTimeframeConverter.java, StringToJobIdConverter.java
               oneMinuteCandle/                fb_1m_job  / thread scheduler-1m-candle
                 OneMinuteCandleScheduler.java       own ThreadPoolTaskScheduler + cron + run() + startup seed
                 OneMinuteCandleService.java / ...ServiceImpl.java   (seed/run/refill + reads)
@@ -228,6 +234,7 @@ mvnw.cmd test
 | GET | `/api/market/{timeframe}/crossover-state` | JWT required | Latest EMA crossover signal state (1m/5m/15m) | `MarketDataController` |
 | GET | `/api/market/{timeframe}/last-candle` | JWT required | Most recent candle in buffer (1m/5m/15m) | `MarketDataController` |
 | GET | `/api/market/{timeframe}/buffer` | JWT required | Full candle buffer snapshot (1m/5m/15m) | `MarketDataController` |
+| GET | `/api/jobs/{timeframe}/details` | JWT required | Aggregate job details: status + last crossover + last 5 candles (1m/5m/15m) | `JobDetailsController` |
 | GET | `/actuator/health` | Public | Health check | Spring Actuator |
 | GET | `/swagger-ui/**` | Public | Swagger UI | springdoc-openapi |
 | GET | `/v3/api-docs/**` | Public | OpenAPI docs | springdoc-openapi |
@@ -337,8 +344,16 @@ Do not store secret values here. See `application.yaml` for config keys.
 | `AuthContext` init (page refresh) | `POST /api/users/userDetails` | On app load, if token valid, decode JWT `sub` → call `getUserDetails(sub)` in background → set `userDetails` in state. `isAuthenticated` is token-based (synchronous), so `ProtectedRoute` passes immediately; userDetails fills in once fetch completes. |
 | `api.ts` interceptor (401 handler) | Any protected endpoint | On 401 (excluding login), removes `token` from localStorage and redirects to `/login?error=...` |
 | `DashboardPage` sidebar user button | No API call | Opens modal showing `userDetails` from context: `id`, `username`, `role`, `enabled`. No re-fetch on open. |
+| `JobsDetailsPage` via `jobService.getJobDetails(timeframe)` | `GET /api/jobs/{timeframe}/details` | One card per job (1m/5m/15m), config in `src/config/jobs.ts`. **No auto-polling:** all 3 cards load once on mount/page refresh; each card has its own refresh button that re-calls the API for just that job. Fetches are skipped when `isTokenValid()` is false (logout). Per-card state map keyed by jobId: `{ data, loading, error, lastUpdated }` — a failed/errored card preserves its previous data. "View Details" opens a modal (reuses `.modal-overlay`/`.modal-box`) with full status, last crossover state, and last 5 candles shown as an SVG candlestick chart + table. Types in `src/types/jobDetails.ts` mirror the backend DTOs. |
 
 CORS: Backend allows `http://localhost:5173` on all paths (`/**`).
+
+### Job Details API contract (`GET /api/jobs/{timeframe}/details`)
+
+- **Path var:** `timeframe` = `1m` / `5m` / `15m` (a bare `fb_*` job id → 400). Mapped to `JobId` at the backend via `Timeframe.toJobId()`.
+- **Auth:** JWT required (`anyRequest().authenticated()`); Swagger shows `Bearer Authentication`. Errors: 400 invalid timeframe, 401 no/invalid JWT, 404 job not found, 500 unexpected.
+- **Response `JobDetailsResponseDto`:** `{ jobId, jobName, timeframe, status: JobStatusDto, lastCrossOverState: CrossoverStateDto|null, lastFiveCandles: Candle[] }` — all immutable snapshots (status RW-locked, candles copied via `subList` of the read-locked buffer; no internal collection exposed).
+- **Backend files:** `controller/JobDetailsController` (thin) → `scheduler/common/JobDetailsService`(+Impl, dispatches to the per-job services) → `JobDetailsResponseDto`. Test: `controller/JobDetailsControllerTest` (`@SpringBootTest`, verifies timeframe→JobId mapping; 3 tests pass).
 
 ## Project-Wide Development Rules
 

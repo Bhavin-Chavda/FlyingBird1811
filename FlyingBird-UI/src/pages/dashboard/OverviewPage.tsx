@@ -22,7 +22,7 @@ const STATS = [
 ];
 
 const OverviewPage: React.FC = () => {
-  const { user } = useAuth();
+  const { userDetails } = useAuth();
 
   return (
     <div className="page-content">
@@ -30,7 +30,7 @@ const OverviewPage: React.FC = () => {
       <div className="welcome-row">
         <div>
           <h2 className="welcome-title">
-            Welcome back, <span className="accent">{user?.username}</span>
+            Welcome back, <span className="accent">{userDetails?.username}</span>
           </h2>
           <p className="welcome-sub">Here's your market snapshot for today.</p>
         </div>
