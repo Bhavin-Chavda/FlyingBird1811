@@ -55,5 +55,5 @@ export interface JobDetailsResponseDto {
   timeframe: string;               // 1m / 5m / 15m
   status: JobStatusDto | null;
   lastCrossOverState: CrossoverStateDto | null;
-  lastFiveCandles: Candle[];
+  candles: Candle[];
 }

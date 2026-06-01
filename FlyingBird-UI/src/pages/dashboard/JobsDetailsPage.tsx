@@ -60,15 +60,20 @@ const hhmm = (t: string | null | undefined): string => {
 const CandleChart: React.FC<{ candles: Candle[] }> = ({ candles }) => {
   if (!candles.length) return null;
 
+  const n = candles.length;
   const PAD_LEFT = 52;
   const PAD_RIGHT = 12;
   const PAD_TOP = 12;
   const PLOT_H = 200;
   const AXIS_H = 22;
-  const COL_W = 70;
-  const BODY_W = 24;
+  // Column/body widths adapt to the configured candle count: wide for a few
+  // candles, narrower (with horizontal scroll) as the count grows.
+  const COL_W = Math.max(26, Math.min(64, Math.round(680 / n)));
+  const BODY_W = Math.max(4, Math.min(22, Math.round(COL_W * 0.5)));
+  // Thin out x-axis time labels so they never overlap (~max 12 labels).
+  const labelStep = Math.ceil(n / 12);
   const HEIGHT = PAD_TOP + PLOT_H + AXIS_H;
-  const WIDTH = PAD_LEFT + candles.length * COL_W + PAD_RIGHT;
+  const WIDTH = PAD_LEFT + n * COL_W + PAD_RIGHT;
 
   const highs = candles.map((c) => c.high);
   const lows = candles.map((c) => c.low);
@@ -123,9 +128,11 @@ const CandleChart: React.FC<{ candles: Candle[] }> = ({ candles }) => {
                 height={bodyH}
                 rx={1}
               />
-              <text className="cc-axis" x={cx} y={HEIGHT - 6} textAnchor="middle">
-                {hhmm(c.time)}
-              </text>
+              {i % labelStep === 0 || i === n - 1 ? (
+                <text className="cc-axis" x={cx} y={HEIGHT - 6} textAnchor="middle">
+                  {hhmm(c.time)}
+                </text>
+              ) : null}
             </g>
           );
         })}
@@ -430,7 +437,7 @@ const JobsDetailsPage: React.FC = () => {
             <div className="modal-body modal-body--scroll">
               <JobStatusSection d={openJob.data} />
               <CrossoverSection d={openJob.data} />
-              <CandlesSection candles={openJob.data.lastFiveCandles} />
+              <CandlesSection candles={openJob.data.candles} />
             </div>
           </div>
         </div>

@@ -28,8 +28,9 @@ class JobDetailsControllerTest {
         assertThat(body).isNotNull();
         assertThat(body.getJobId()).isEqualTo("fb_1m_job");
         assertThat(body.getTimeframe()).isEqualTo("1m");
-        assertThat(body.getLastFiveCandles()).isNotNull();
-        assertThat(body.getLastFiveCandles().size()).isLessThanOrEqualTo(5);
+        assertThat(body.getCandles()).isNotNull();
+        // Default scheduler.job-details.candle-count = 5.
+        assertThat(body.getCandles().size()).isLessThanOrEqualTo(5);
     }
 
     @Test
