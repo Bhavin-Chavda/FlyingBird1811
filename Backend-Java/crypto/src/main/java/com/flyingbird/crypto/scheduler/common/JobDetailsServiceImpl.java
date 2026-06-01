@@ -1,5 +1,6 @@
 package com.flyingbird.crypto.scheduler.common;
 
+import com.flyingbird.crypto.config.SchedulerProperties;
 import com.flyingbird.crypto.marketdata.model.Candle;
 import com.flyingbird.crypto.scheduler.fifteenMinuteCandle.FifteenMinuteCandleService;
 import com.flyingbird.crypto.scheduler.fiveMinuteCandle.FiveMinuteCandleService;
@@ -29,8 +30,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobDetailsServiceImpl implements JobDetailsService {
 
-    private static final int LAST_CANDLES = 5;
-
+    private final SchedulerProperties schedulerProperties;
     private final JobStatusService jobStatusService;
     private final OneMinuteCandleService oneMinuteCandleService;
     private final FiveMinuteCandleService fiveMinuteCandleService;
@@ -56,7 +56,7 @@ public class JobDetailsServiceImpl implements JobDetailsService {
             case FB_15M -> fifteenMinuteCandleService.getBufferSnapshot();
         };
 
-        List<Candle> lastFive = lastCandles(buffer);
+        List<Candle> candles = lastCandles(buffer);
 
         return JobDetailsResponseDto.builder()
                 .jobId(jobId.getCode())
@@ -64,17 +64,24 @@ public class JobDetailsServiceImpl implements JobDetailsService {
                 .timeframe(jobId.toTimeframe().getCode())
                 .status(status)
                 .lastCrossOverState(crossover)
-                .lastFiveCandles(lastFive)
+                .candles(candles)
                 .build();
     }
 
-    /** Immutable copy of the last {@value #LAST_CANDLES} candles (oldest → newest). */
+    /**
+     * Immutable copy of the last {@code scheduler.job-details.candle-count} candles
+     * (oldest → newest).
+     */
     private List<Candle> lastCandles(List<Candle> buffer) {
         if (buffer == null || buffer.isEmpty()) {
             return Collections.emptyList();
         }
+        int count = Math.max(0, schedulerProperties.getJobDetails().getCandleCount());
+        if (count == 0) {
+            return Collections.emptyList();
+        }
         int size = buffer.size();
-        int from = Math.max(0, size - LAST_CANDLES);
+        int from = Math.max(0, size - count);
         return new ArrayList<>(buffer.subList(from, size));
     }
 }

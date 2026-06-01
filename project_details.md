@@ -96,7 +96,7 @@ D:\Bhavin
               JwtAuthenticationFilter.java
               CustomAuthenticationEntryPoint.java
               CustomUserDetailsService.java
-              SchedulerProperties.java      scheduler.* (timezone + per-job cron)
+              SchedulerProperties.java      scheduler.* (timezone + per-job cron + job-details.candle-count)
               MarketDataProperties.java     market.* (Delta URL, symbol, buffer, EMA, retry)
               NotificationProperties.java   notification.email.*
             controller/
@@ -119,7 +119,7 @@ D:\Bhavin
                 SchedulerTimeUtils.java       stateless IST time helper
                 SchedulerConstants.java
                 JobStatusService.java / JobStatusServiceImpl.java   RW-locked LIVE status
-                JobDetailsService.java / JobDetailsServiceImpl.java aggregate job details (status+crossover+last5)
+                JobDetailsService.java / JobDetailsServiceImpl.java aggregate job details (status+crossover+last N candles, N configurable)
                 JobStatusDto.java, JobExecutionDto.java, CrossoverStateDto.java, JobDetailsResponseDto.java
                 Timeframe.java, JobId.java, StringToTimeframeConverter.java, StringToJobIdConverter.java
               oneMinuteCandle/                fb_1m_job  / thread scheduler-1m-candle
@@ -234,7 +234,7 @@ mvnw.cmd test
 | GET | `/api/market/{timeframe}/crossover-state` | JWT required | Latest EMA crossover signal state (1m/5m/15m) | `MarketDataController` |
 | GET | `/api/market/{timeframe}/last-candle` | JWT required | Most recent candle in buffer (1m/5m/15m) | `MarketDataController` |
 | GET | `/api/market/{timeframe}/buffer` | JWT required | Full candle buffer snapshot (1m/5m/15m) | `MarketDataController` |
-| GET | `/api/jobs/{timeframe}/details` | JWT required | Aggregate job details: status + last crossover + last 5 candles (1m/5m/15m) | `JobDetailsController` |
+| GET | `/api/jobs/{timeframe}/details` | JWT required | Aggregate job details: status + last crossover + last N candles (N = `scheduler.job-details.candle-count`) (1m/5m/15m) | `JobDetailsController` |
 | GET | `/actuator/health` | Public | Health check | Spring Actuator |
 | GET | `/swagger-ui/**` | Public | Swagger UI | springdoc-openapi |
 | GET | `/v3/api-docs/**` | Public | OpenAPI docs | springdoc-openapi |
@@ -327,6 +327,7 @@ Migration tool: None detected (no Flyway or Liquibase in pom.xml).
 | `spring.datasource.password` | Backend | MySQL password | Yes |
 | `spring.jwt.secret` | Backend | JWT signing secret | Yes |
 | `spring.jwt.expiration` | Backend | JWT expiry in ms (default: 86400000 = 24h) | No |
+| `scheduler.job-details.candle-count` | Backend | Candles returned per job by `GET /api/jobs/{tf}/details` (code default 5; `application.yaml` currently sets 10) | No |
 | `DELTA_BASE_URL` | Backend | Delta Exchange REST base URL (default `https://api.india.delta.exchange`) | No |
 | `CANDLE_SYMBOL` | Backend | Candle instrument symbol (default `BTCUSD`) | No |
 | `DEMO_BTCUSD_ID` | Backend | Delta product id for bracket orders in signal email | No |
@@ -344,7 +345,7 @@ Do not store secret values here. See `application.yaml` for config keys.
 | `AuthContext` init (page refresh) | `POST /api/users/userDetails` | On app load, if token valid, decode JWT `sub` → call `getUserDetails(sub)` in background → set `userDetails` in state. `isAuthenticated` is token-based (synchronous), so `ProtectedRoute` passes immediately; userDetails fills in once fetch completes. |
 | `api.ts` interceptor (401 handler) | Any protected endpoint | On 401 (excluding login), removes `token` from localStorage and redirects to `/login?error=...` |
 | `DashboardPage` sidebar user button | No API call | Opens modal showing `userDetails` from context: `id`, `username`, `role`, `enabled`. No re-fetch on open. |
-| `JobsDetailsPage` via `jobService.getJobDetails(timeframe)` | `GET /api/jobs/{timeframe}/details` | One card per job (1m/5m/15m), config in `src/config/jobs.ts`. **No auto-polling:** all 3 cards load once on mount/page refresh; each card has its own refresh button that re-calls the API for just that job. Fetches are skipped when `isTokenValid()` is false (logout). Per-card state map keyed by jobId: `{ data, loading, error, lastUpdated }` — a failed/errored card preserves its previous data. "View Details" opens a modal (reuses `.modal-overlay`/`.modal-box`) with full status, last crossover state, and last 5 candles shown as an SVG candlestick chart + table. Types in `src/types/jobDetails.ts` mirror the backend DTOs. |
+| `JobsDetailsPage` via `jobService.getJobDetails(timeframe)` | `GET /api/jobs/{timeframe}/details` | One card per job (1m/5m/15m), config in `src/config/jobs.ts`. **No auto-polling:** all 3 cards load once on mount/page refresh; each card has its own refresh button that re-calls the API for just that job, plus a header "Refresh All" button (own `refreshingAll` flag). Fetches are skipped when `isTokenValid()` is false (logout). Per-card state map keyed by jobId: `{ data, loading, error, lastUpdated }` — a failed/errored card preserves its previous data. "View Details" opens a modal (reuses `.modal-overlay`/`.modal-box`) with full status, last crossover state, and the response `candles` (count = `scheduler.job-details.candle-count`) shown as an SVG candlestick chart + table. The chart adapts column/body width to the candle count and thins x-axis time labels (~max 12), with horizontal scroll for large counts. Types in `src/types/jobDetails.ts` mirror the backend DTOs. |
 
 CORS: Backend allows `http://localhost:5173` on all paths (`/**`).
 
@@ -352,7 +353,7 @@ CORS: Backend allows `http://localhost:5173` on all paths (`/**`).
 
 - **Path var:** `timeframe` = `1m` / `5m` / `15m` (a bare `fb_*` job id → 400). Mapped to `JobId` at the backend via `Timeframe.toJobId()`.
 - **Auth:** JWT required (`anyRequest().authenticated()`); Swagger shows `Bearer Authentication`. Errors: 400 invalid timeframe, 401 no/invalid JWT, 404 job not found, 500 unexpected.
-- **Response `JobDetailsResponseDto`:** `{ jobId, jobName, timeframe, status: JobStatusDto, lastCrossOverState: CrossoverStateDto|null, lastFiveCandles: Candle[] }` — all immutable snapshots (status RW-locked, candles copied via `subList` of the read-locked buffer; no internal collection exposed).
+- **Response `JobDetailsResponseDto`:** `{ jobId, jobName, timeframe, status: JobStatusDto, lastCrossOverState: CrossoverStateDto|null, candles: Candle[] }` — all immutable snapshots (status RW-locked, candles copied via `subList` of the read-locked buffer; no internal collection exposed). The number of candles returned is configurable via `scheduler.job-details.candle-count` (code default 5; `application.yaml` currently sets 10). Field renamed from `lastFiveCandles` → `candles` (2026-06-02) since the count is configurable — frontend type `jobDetails.ts` matches.
 - **Backend files:** `controller/JobDetailsController` (thin) → `scheduler/common/JobDetailsService`(+Impl, dispatches to the per-job services) → `JobDetailsResponseDto`. Test: `controller/JobDetailsControllerTest` (`@SpringBootTest`, verifies timeframe→JobId mapping; 3 tests pass).
 
 ## Project-Wide Development Rules
@@ -493,6 +494,9 @@ Keep updates short, factual, and useful.
 | 2026-06-01 | Each job seeds its own 300-candle buffer at startup on its own thread; refill-on-fetch-error | Implements the Python core idea + the requested error-recovery (empty + refill) |
 | 2026-06-01 | `@RequiredArgsConstructor` for DI; per-job `Job` resolved by constructor param name | No explicit constructors; no shared launcher/qualifier needed |
 | 2026-06-01 | Type-safe enum path variables: `/api/market/{timeframe}`→`Timeframe` (only 1m/5m/15m), `/api/scheduler/jobs/{jobId}`→`JobId` (only fb_*_job) | Each URL strictly accepts its own form (invalid → 400 via converter + MethodArgumentTypeMismatch handler). `Timeframe`↔`JobId` mapped 1:1 (`Timeframe.toJobId()` / `JobId.toTimeframe()`) so scheduler + market data correlate with no separate mapping table. |
+| 2026-06-02 | Added aggregate Job Details API `GET /api/jobs/{timeframe}/details` (`JobDetailsController` → `JobDetailsService`/Impl → `JobDetailsResponseDto`) + integrated `JobsDetailsPage` (cards, per-card + Refresh All buttons, View Details modal, SVG candlestick chart) | One round-trip for the dashboard: status + last crossover + last N candles per job; thin controller, per-job dispatch, immutable snapshots |
+| 2026-06-02 | Job-details candle count made configurable (`scheduler.job-details.candle-count`, code default 5, yaml set to 10); response field renamed `lastFiveCandles` → `candles` | Count is no longer fixed at 5; field name kept accurate. Frontend type + chart updated to match (chart sizing adapts to count) |
+| 2026-06-02 | `JobsDetailsPage` uses no auto-polling; manual per-card refresh + header "Refresh All" | User decision — cards update on page load and on explicit refresh only (no interval timers) |
 
 ## Known Issues
 
@@ -501,7 +505,7 @@ Keep updates short, factual, and useful.
 | `/admin/update-role` is public | Backend | Resolved | Secured with `@PreAuthorize("hasRole('ADMIN')")` and `permitAll()` removed from SecurityConfig on 2026-06-01 |
 | No database migration tool | Backend | Open | DDL is `none`; schema exists in MySQL (`fly_db`) but is managed manually; no Flyway/Liquibase |
 | No frontend test script | Frontend | Open | `npm run test` does not exist in package.json |
-| Dashboard pages have no API calls yet | Frontend | In progress | `OverviewPage`, `JobsDetailsPage`, `TradesPage`, `HistoryPage`, `AnalyticsPage` are yet to be developed |
+| Dashboard pages API integration | Frontend | Partial | `JobsDetailsPage` is now fully integrated with `GET /api/jobs/{tf}/details` (cards + modal + candlestick chart). `OverviewPage` still uses hardcoded mock market data; `TradesPage`, `HistoryPage`, `AnalyticsPage` are still placeholders (no API calls). |
 
 ## Testing Checklist
 
@@ -535,5 +539,6 @@ Updated 2026-06-01: Phase 3 — added Spring Batch (spring-boot-starter-batch) f
 Updated 2026-06-01: Phase 3 fixes — (1) failing contextLoads test fixed: src/test/resources/application.yaml was missing scheduler.cron.* (added + defaults on @Scheduled placeholders; tests now H2-only, hermetic, BUILD SUCCESS). (2) Migrated off deprecated JobLauncher/JobExplorer to JobOperator/JobRepository. (3) Boot 4 removed spring.batch.jdbc.initialize-schema (silently ignored → no tables); switched to spring.sql.init + bundled schema-mysql.sql (continue-on-error). VERIFIED via JDBC: 9 BATCH_* tables created in fly_db, restart-idempotent. Delta contract (/v2/history/candles, India base URL, no auth, seconds, field 'time') re-checked against docs.delta.exchange.
 Updated 2026-06-01: Phase 4 — scheduler module refactor. Removed monolithic MarketDataScheduler + shared EnumMap deque/lock store. Added per-job classes (scheduler/candle/{One,Five,Fifteen}MinuteCandleScheduler extends AbstractCandleScheduler), each on its OWN dedicated single-thread scheduler (scheduler-1m/5m/15m-candle) via CronTrigger (no @Scheduled). Per-timeframe CandleStore (deque + ReentrantReadWriteLock, immutable-copy reads) via CandleStoreRegistry; CandleBufferServiceImpl is now a thin orchestrator. CandleJobLauncher centralises overlap-guard + batch launch + status. JobStatus/JobStatusService moved to scheduler/common; JobStatusResponseDto gained threadName/lastEndTime/lastDurationMs/lastDataCount (additive). APIs/paths unchanged. VERIFIED: clean compile, BUILD SUCCESS (tests), and 3 dedicated named schedulers initialise at startup. See Backend-Java/SCHEDULER_README.md.
 Updated 2026-06-01: Phase 6 — per-job Spring Batch re-added for DURABLE history in the common BATCH_* tables (each job owns its own Job/Step/Tasklet/BatchConfig; no shared batch job; launched via JobOperator by each scheduler). Each job seeds its own 300-candle buffer at startup on its own thread; on next-candle fetch error the buffer is emptied + refilled (initial logic). DI switched to @RequiredArgsConstructor (per-job Job resolved by param name). API reads run on the request thread, thread-safe. VERIFIED: clean compile, BUILD SUCCESS (tests, 7s), 3 schedulers each seeded 300 candles on their own thread at startup, 9 BATCH_* tables present in fly_db.
+Audited 2026-06-02: Project re-indexed (shallow-medium). Verified stack unchanged — Frontend React 19.2 / Vite 8.0 / TS ~6.0 (axios 1.15, react-router-dom 7, lucide-react 1.8); Backend Java 21 / Spring Boot 4.0.5 / springdoc 2.7.0 / jjwt 0.11.5 / spring-boot-starter-batch + -mail present; routes + dashboard pages match docs. Reconciled docs with the Job Details feature shipped this session: new `GET /api/jobs/{timeframe}/details` (JobDetailsController/Service/Impl/JobDetailsResponseDto), `JobsDetailsPage` integration (cards + Refresh All + View Details modal + adaptive SVG candlestick chart), configurable `scheduler.job-details.candle-count` (code default 5; application.yaml currently 10), and response field rename `lastFiveCandles` → `candles`. Updated API table, folder structure, env/config table, Job Details contract, F→B integration, Known Decisions, Known Issues. No application code modified during this audit. Git branch: feature-job-details-page-design; working-tree changes are the Job Details work (8 files).
 Updated 2026-06-01: Phase 5 — FULL per-job refactor. Removed AbstractCandleScheduler, CandleJobLauncher (shared launcher), MarketDataJobService (shared run), CandleBufferService + CandleStore/registry (shared store), EmaService/CrossoverService (folded into stateless CandleCalculationUtils), MarketDataInitializer, and Spring Batch (dependency + BatchConfig + tasklet + spring.sql.init + JobExecution/JobStatus batch DTOs). New layout: scheduler/{oneMinuteCandle,fiveMinuteCandle,fifteenMinuteCandle} each with own Scheduler+Service+ServiceImpl+Store (own ThreadPoolTaskScheduler + ReentrantReadWriteLock); scheduler/common = CandleCalculationUtils + SchedulerTimeUtils + JobStatusService(+Impl) + DTOs (JobStatusDto, JobExecutionDto, CrossoverStateDto). DeltaCandleClient now generic (resolution+bucket). /api/scheduler/history backed by in-memory per-job history. APIs/paths/auth unchanged. VERIFIED: clean compile, BUILD SUCCESS (tests, 7.5s), 3 independent named schedulers init at startup. SCHEDULER_README.md updated.
 ```

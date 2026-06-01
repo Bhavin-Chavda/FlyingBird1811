@@ -61,6 +61,8 @@ scheduler:
     one-min: "5 * * * * *"        # second 5 of every minute
     five-min: "5 */5 * * * *"     # second 5 of every 5th minute
     fifteen-min: "15 */15 * * * *" # second 15 of every 15th minute
+  job-details:
+    candle-count: 10               # how many most-recent candles the job-details API returns per job
 
 # Delta Exchange candle source + EMA/buffer config (migrated from fetch_data_*.py)
 market:

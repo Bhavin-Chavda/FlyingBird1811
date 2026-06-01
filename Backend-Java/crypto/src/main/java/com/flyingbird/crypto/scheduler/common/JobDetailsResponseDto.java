@@ -18,7 +18,8 @@ import java.util.List;
  * <ul>
  *   <li>{@code status}            — the full live {@link JobStatusDto} snapshot</li>
  *   <li>{@code lastCrossOverState} — the job's latest EMA-stack signal evaluation</li>
- *   <li>{@code lastFiveCandles}   — an immutable copy of the 5 most recent candles</li>
+ *   <li>{@code candles}            — an immutable copy of the N most recent candles
+ *       (N = {@code scheduler.job-details.candle-count}, default 5)</li>
  * </ul>
  *
  * All nested values are immutable snapshots built under the relevant read locks,
@@ -46,6 +47,6 @@ public class JobDetailsResponseDto {
     /** Latest crossover signal evaluation for this job (may be null before first run). */
     private CrossoverStateDto lastCrossOverState;
 
-    /** Up to the 5 most recent candles (oldest → newest); empty before seeding. */
-    private List<Candle> lastFiveCandles;
+    /** Up to N most recent candles (oldest → newest); empty before seeding. */
+    private List<Candle> candles;
 }
