@@ -1,4 +1,4 @@
-package com.flyingbird.crypto.service;
+package com.flyingbird.crypto.service.impl;
 
 import com.flyingbird.crypto.dto.AuthResponseDto;
 import com.flyingbird.crypto.dto.LoginRequestDto;
@@ -7,6 +7,7 @@ import com.flyingbird.crypto.entity.User;
 import com.flyingbird.crypto.exception.InvalidCredentialsException;
 import com.flyingbird.crypto.exception.UserAlreadyExistsException;
 import com.flyingbird.crypto.repository.UserRepository;
+import com.flyingbird.crypto.service.AuthService;
 import com.flyingbird.crypto.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

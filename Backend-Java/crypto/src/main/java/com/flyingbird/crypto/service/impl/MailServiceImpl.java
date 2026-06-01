@@ -1,8 +1,9 @@
-package com.flyingbird.crypto.service;
+package com.flyingbird.crypto.service.impl;
 
 import com.flyingbird.crypto.config.NotificationProperties;
 import com.flyingbird.crypto.marketdata.model.Candle;
 import com.flyingbird.crypto.marketdata.model.OrderRequest;
+import com.flyingbird.crypto.service.MailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.SimpleMailMessage;

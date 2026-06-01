@@ -1,6 +1,7 @@
 package com.flyingbird.crypto.controller;
 
 import com.flyingbird.crypto.scheduler.common.JobExecutionDto;
+import com.flyingbird.crypto.scheduler.common.JobId;
 import com.flyingbird.crypto.scheduler.common.JobStatusDto;
 import com.flyingbird.crypto.scheduler.common.JobStatusService;
 import com.flyingbird.crypto.scheduler.fifteenMinuteCandle.FifteenMinuteCandleBatchConfig;
@@ -68,17 +69,19 @@ public class SchedulerStatusController {
     }
 
     @GetMapping("/jobs/{jobId}")
-    @Operation(summary = "Get scheduler job status", description = "Live runtime status of one scheduler job by jobId")
+    @Operation(summary = "Get scheduler job status",
+            description = "Live runtime status of one scheduler job by jobId (fb_1m_job / fb_5m_job / fb_15m_job)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Job status retrieved",
                     content = @Content(schema = @Schema(implementation = JobStatusDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid jobId"),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT token"),
             @ApiResponse(responseCode = "404", description = "Job with given jobId not found")
     })
     @SecurityRequirement(name = "Bearer Authentication")
-    public ResponseEntity<JobStatusDto> getJob(@PathVariable String jobId) {
-        log.info("Scheduler job status requested | jobId={}", jobId);
-        return ResponseEntity.ok(jobStatusService.getStatus(jobId));
+    public ResponseEntity<JobStatusDto> getJob(@PathVariable JobId jobId) {
+        log.info("Scheduler job status requested | jobId={}", jobId.getCode());
+        return ResponseEntity.ok(jobStatusService.getStatus(jobId.getCode()));
     }
 
     @GetMapping("/history")

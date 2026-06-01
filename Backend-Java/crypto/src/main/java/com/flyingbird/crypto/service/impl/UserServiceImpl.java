@@ -1,9 +1,10 @@
-package com.flyingbird.crypto.service;
+package com.flyingbird.crypto.service.impl;
 
 import com.flyingbird.crypto.dto.UserDetailsResponseDto;
 import com.flyingbird.crypto.entity.User;
 import com.flyingbird.crypto.exception.UserNotFoundException;
 import com.flyingbird.crypto.repository.UserRepository;
+import com.flyingbird.crypto.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
