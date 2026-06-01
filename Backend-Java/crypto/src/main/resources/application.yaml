@@ -17,9 +17,67 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
+  # Spring Batch — each job records into the common BATCH_* tables (one history store).
+  batch:
+    job:
+      enabled: false   # jobs are launched per-tick by their own scheduler, not at startup
+
+  # Boot 4 has no batch auto schema-init; create the common BATCH_* tables in fly_db from
+  # Spring Batch's bundled MySQL schema. continue-on-error keeps restarts idempotent.
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+      schema-locations: classpath:org/springframework/batch/core/schema-mysql.sql
+
   jwt:
     secret: "mySecretKeyForJWTTokenGenerationAndValidation12345678901234567890"
     expiration: 86400000  # 24 hours in milliseconds
 
+  # SMTP (JavaMailSender). Driven by env vars; left blank by default so the
+  # app boots without mail configured. Set these to enable signal emails.
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:jaydipvadher111@gmail.com}
+    password: ${SMTP_PASS:seunugksrlurmlqc}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
+
 server:
   port: 8080
+
+# ===================== Scheduler / market-data migration =====================
+# Single source of truth for cron expressions (referenced by @Scheduled and by
+# job-status registration) — replaces the previous duplicated literals.
+scheduler:
+  timezone: Asia/Kolkata
+  cron:
+    one-min: "5 * * * * *"        # second 5 of every minute
+    five-min: "5 */5 * * * *"     # second 5 of every 5th minute
+    fifteen-min: "15 */15 * * * *" # second 15 of every 15th minute
+
+# Delta Exchange candle source + EMA/buffer config (migrated from fetch_data_*.py)
+market:
+  delta-base-url: ${DELTA_BASE_URL:https://api.india.delta.exchange}
+  symbol: ${CANDLE_SYMBOL:BTCUSD}
+  buffer-length: 300
+  seed-multiple: 10
+  product-id: ${DEMO_BTCUSD_ID:}
+  fetch-timeout-ms: 15000
+  retry-attempts: 3        # retry Delta fetch this many times before failing
+  retry-backoff-ms: 1000   # base backoff between retries (multiplied by attempt)
+
+# Crossover signal email (migrated from mailor.py). Disabled by default.
+notification:
+  email:
+    enabled: ${EMAIL_ENABLED:true}
+    from: ${EMAIL_FROM:jaydipvadher111@gmail.com}
+    to: ${EMAIL_TO:flyingbird1b@gmail.com}
+    cc: ${EMAIL_CC:}
+    bcc: ${EMAIL_BCC:}
+    subject-prefix: "[FlyingBird] "
