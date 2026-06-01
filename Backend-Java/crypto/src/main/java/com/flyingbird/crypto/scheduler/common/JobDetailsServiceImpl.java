@@ -1,0 +1,80 @@
+package com.flyingbird.crypto.scheduler.common;
+
+import com.flyingbird.crypto.marketdata.model.Candle;
+import com.flyingbird.crypto.scheduler.fifteenMinuteCandle.FifteenMinuteCandleService;
+import com.flyingbird.crypto.scheduler.fiveMinuteCandle.FiveMinuteCandleService;
+import com.flyingbird.crypto.scheduler.oneMinuteCandle.OneMinuteCandleService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Job Details Service implementation.
+ *
+ * Dispatches to the per-job service that owns each store (no shared runner, no
+ * base class). Each call reads:
+ * <ul>
+ *   <li>live status from the RW-locked {@link JobStatusService}</li>
+ *   <li>crossover state + buffer from the relevant per-job store (read-locked)</li>
+ * </ul>
+ * and copies the last 5 candles into a fresh list so no mutable internal
+ * collection is exposed.
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class JobDetailsServiceImpl implements JobDetailsService {
+
+    private static final int LAST_CANDLES = 5;
+
+    private final JobStatusService jobStatusService;
+    private final OneMinuteCandleService oneMinuteCandleService;
+    private final FiveMinuteCandleService fiveMinuteCandleService;
+    private final FifteenMinuteCandleService fifteenMinuteCandleService;
+
+    @Override
+    public JobDetailsResponseDto getJobDetails(JobId jobId) {
+        log.info("Building job details | jobId={}", jobId.getCode());
+
+        // Live status snapshot (RW-locked, internally consistent).
+        JobStatusDto status = jobStatusService.getStatus(jobId.getCode());
+
+        // Crossover state + buffer come from the per-job store this job owns.
+        CrossoverStateDto crossover = switch (jobId) {
+            case FB_1M -> oneMinuteCandleService.getCrossoverState();
+            case FB_5M -> fiveMinuteCandleService.getCrossoverState();
+            case FB_15M -> fifteenMinuteCandleService.getCrossoverState();
+        };
+
+        List<Candle> buffer = switch (jobId) {
+            case FB_1M -> oneMinuteCandleService.getBufferSnapshot();
+            case FB_5M -> fiveMinuteCandleService.getBufferSnapshot();
+            case FB_15M -> fifteenMinuteCandleService.getBufferSnapshot();
+        };
+
+        List<Candle> lastFive = lastCandles(buffer);
+
+        return JobDetailsResponseDto.builder()
+                .jobId(jobId.getCode())
+                .jobName(status != null ? status.getJobName() : jobId.getCode())
+                .timeframe(jobId.toTimeframe().getCode())
+                .status(status)
+                .lastCrossOverState(crossover)
+                .lastFiveCandles(lastFive)
+                .build();
+    }
+
+    /** Immutable copy of the last {@value #LAST_CANDLES} candles (oldest → newest). */
+    private List<Candle> lastCandles(List<Candle> buffer) {
+        if (buffer == null || buffer.isEmpty()) {
+            return Collections.emptyList();
+        }
+        int size = buffer.size();
+        int from = Math.max(0, size - LAST_CANDLES);
+        return new ArrayList<>(buffer.subList(from, size));
+    }
+}
