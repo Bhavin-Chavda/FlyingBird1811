@@ -477,6 +477,7 @@ Keep updates short, factual, and useful.
 | 2026-06-01 | Re-added Spring Batch as PER-JOB jobs (own Job/Step/Tasklet/BatchConfig per package); history in the common BATCH_* tables | User wants durable job history in one table while keeping "no shared run" — each job launches its own batch job via JobOperator |
 | 2026-06-01 | Each job seeds its own 300-candle buffer at startup on its own thread; refill-on-fetch-error | Implements the Python core idea + the requested error-recovery (empty + refill) |
 | 2026-06-01 | `@RequiredArgsConstructor` for DI; per-job `Job` resolved by constructor param name | No explicit constructors; no shared launcher/qualifier needed |
+| 2026-06-01 | Type-safe enum path variables: `/api/market/{timeframe}`→`Timeframe` (only 1m/5m/15m), `/api/scheduler/jobs/{jobId}`→`JobId` (only fb_*_job) | Each URL strictly accepts its own form (invalid → 400 via converter + MethodArgumentTypeMismatch handler). `Timeframe`↔`JobId` mapped 1:1 (`Timeframe.toJobId()` / `JobId.toTimeframe()`) so scheduler + market data correlate with no separate mapping table. |
 
 ## Known Issues
 

@@ -56,6 +56,7 @@ server:
 # job-status registration) — replaces the previous duplicated literals.
 scheduler:
   timezone: Asia/Kolkata
+  seed-on-startup: true          # feed each job's 300-candle buffer at application startup
   cron:
     one-min: "5 * * * * *"        # second 5 of every minute
     five-min: "5 */5 * * * *"     # second 5 of every 5th minute

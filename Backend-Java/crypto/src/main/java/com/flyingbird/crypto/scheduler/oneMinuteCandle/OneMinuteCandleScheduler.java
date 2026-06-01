@@ -61,12 +61,26 @@ public class OneMinuteCandleScheduler {
     }
 
     private void initialSeed() {
-        try {
-            oneMinuteCandleService.seed();
-            log.info("[{}] initial buffer seeded ({} candles)", THREAD_NAME, oneMinuteCandleService.bufferSize());
-        } catch (Exception e) {
-            log.warn("[{}] initial seed failed (will refill on next tick): {}", THREAD_NAME, e.getMessage());
+        int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                oneMinuteCandleService.seed();
+                log.info("[{}] initial buffer seeded ({} candles)", THREAD_NAME, oneMinuteCandleService.bufferSize());
+                return;
+            } catch (Exception e) {
+                log.warn("[{}] initial seed attempt {}/{} failed: {}", THREAD_NAME, attempt, maxAttempts, e.getMessage());
+                if (attempt < maxAttempts) {
+                    try {
+                        Thread.sleep(3000L);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+            }
         }
+        log.error("[{}] initial seeding failed after {} attempts; buffer will refill on the next scheduled tick",
+                THREAD_NAME, maxAttempts);
     }
 
     private void run() {
