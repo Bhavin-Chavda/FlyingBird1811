@@ -41,6 +41,7 @@ public class FiveMinuteCandleServiceImpl implements FiveMinuteCandleService {
         List<Candle> history = deltaCandleClient.fetchLastNCandles(RESOLUTION, BUCKET_SECONDS, seedCount);
         CandleCalculationUtils.seedAndFill(history);
         store.seedReplace(history);
+        recordInitialCrossover();
         log.info("[{}] 5m buffer seeded | size={}", Thread.currentThread().getName(), store.size());
     }
 
@@ -97,6 +98,17 @@ public class FiveMinuteCandleServiceImpl implements FiveMinuteCandleService {
         }
         String details = signal + " SIGNAL GENERATED (5m):\n" + SchedulerTimeUtils.nowIstLabel();
         mailService.sendSignalEmail(last, order, subject, details);
+    }
+
+    /**
+     * Record an initial crossover snapshot right after seeding so the state is
+     * populated before the first scheduled run (no signal email on seed).
+     */
+    private void recordInitialCrossover() {
+        List<Candle> seeded = store.snapshot();
+        String signal = CandleCalculationUtils.evaluateSignal(seeded);
+        String candleTime = seeded.isEmpty() ? null : seeded.get(seeded.size() - 1).getTime();
+        store.recordEvaluation(signal, candleTime, SchedulerTimeUtils.nowIstLabel());
     }
 
     @Override

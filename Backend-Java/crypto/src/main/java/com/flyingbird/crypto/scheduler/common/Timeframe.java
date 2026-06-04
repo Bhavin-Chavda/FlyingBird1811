@@ -13,7 +13,8 @@ public enum Timeframe {
 
     ONE_MINUTE("1m"),
     FIVE_MINUTE("5m"),
-    FIFTEEN_MINUTE("15m");
+    FIFTEEN_MINUTE("15m"),
+    ONE_HOUR("1h");
 
     private final String code;
 
@@ -32,6 +33,7 @@ public enum Timeframe {
             case ONE_MINUTE -> JobId.FB_1M;
             case FIVE_MINUTE -> JobId.FB_5M;
             case FIFTEEN_MINUTE -> JobId.FB_15M;
+            case ONE_HOUR -> JobId.FB_1H;
         };
     }
 
@@ -41,6 +43,6 @@ public enum Timeframe {
                 return t;
             }
         }
-        throw new IllegalArgumentException("Unknown timeframe '" + code + "' (expected 1m, 5m or 15m)");
+        throw new IllegalArgumentException("Unknown timeframe '" + code + "' (expected 1m, 5m, 15m or 1h)");
     }
 }

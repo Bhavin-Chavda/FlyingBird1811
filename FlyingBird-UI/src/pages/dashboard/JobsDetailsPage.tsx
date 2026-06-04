@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity, AlertTriangle, CheckCircle2, Clock, RefreshCw, X, XCircle,
 } from 'lucide-react';
@@ -249,6 +249,11 @@ const CandlesSection: React.FC<{ candles: Candle[] }> = ({ candles }) => (
             </tbody>
           </table>
         </div>
+
+        <details className="candle-json">
+          <summary>Raw JSON (last {candles.length} candles)</summary>
+          <pre className="candle-json-pre">{JSON.stringify(candles, null, 2)}</pre>
+        </details>
       </>
     ) : (
       <p className="job-empty">No candles available yet.</p>
@@ -379,11 +384,17 @@ const JobsDetailsPage: React.FC = () => {
     }
   }, [fetchJob]);
 
-  // Load all 3 cards once on mount / page refresh. No auto-polling — each card
-  // is refreshed on demand via its own refresh button or the "Refresh All" button.
+  // Load every card once on mount / page refresh. This goes straight to the
+  // per-card fetch (not refreshAll) so it doesn't flash the "Refresh All"
+  // spinner. The ref guard makes it idempotent across React StrictMode's
+  // double-invoke in dev — a real page reload starts with a fresh ref, so it
+  // still loads once per genuine mount.
+  const didInitialLoad = useRef(false);
   useEffect(() => {
-    refreshAll();
-  }, [refreshAll]);
+    if (didInitialLoad.current) return;
+    didInitialLoad.current = true;
+    JOB_CONFIGS.forEach((job) => fetchJob(job));
+  }, [fetchJob]);
 
   const openJob = openJobId ? states[openJobId] : null;
   const openConfig = JOB_CONFIGS.find((j) => j.jobId === openJobId) ?? null;

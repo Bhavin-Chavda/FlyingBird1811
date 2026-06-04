@@ -27,6 +27,7 @@ public class SchedulerProperties {
         private String oneMin;
         private String fiveMin;
         private String fifteenMin;
+        private String oneHour;
     }
 
     @Data

@@ -6,6 +6,7 @@ import com.flyingbird.crypto.scheduler.common.JobStatusDto;
 import com.flyingbird.crypto.scheduler.common.JobStatusService;
 import com.flyingbird.crypto.scheduler.fifteenMinuteCandle.FifteenMinuteCandleBatchConfig;
 import com.flyingbird.crypto.scheduler.fiveMinuteCandle.FiveMinuteCandleBatchConfig;
+import com.flyingbird.crypto.scheduler.hourlyCandle.HourlyCandleBatchConfig;
 import com.flyingbird.crypto.scheduler.oneMinuteCandle.OneMinuteCandleBatchConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -49,7 +50,8 @@ public class SchedulerStatusController {
     private static final String[] BATCH_JOB_NAMES = {
             OneMinuteCandleBatchConfig.JOB_NAME,
             FiveMinuteCandleBatchConfig.JOB_NAME,
-            FifteenMinuteCandleBatchConfig.JOB_NAME
+            FifteenMinuteCandleBatchConfig.JOB_NAME,
+            HourlyCandleBatchConfig.JOB_NAME
     };
 
     private final JobStatusService jobStatusService;
