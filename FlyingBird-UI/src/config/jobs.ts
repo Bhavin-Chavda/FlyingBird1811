@@ -15,4 +15,5 @@ export const JOB_CONFIGS: JobConfig[] = [
   { jobId: 'fb_1m_job',  timeframe: '1m',  label: '1 Minute Candle'  },
   { jobId: 'fb_5m_job',  timeframe: '5m',  label: '5 Minute Candle'  },
   { jobId: 'fb_15m_job', timeframe: '15m', label: '15 Minute Candle' },
+  { jobId: 'fb_1h_job',  timeframe: '1h',  label: '1 Hour Candle'    },
 ];

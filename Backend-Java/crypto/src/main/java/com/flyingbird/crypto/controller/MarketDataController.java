@@ -6,6 +6,7 @@ import com.flyingbird.crypto.scheduler.common.CrossoverStateDto;
 import com.flyingbird.crypto.scheduler.common.Timeframe;
 import com.flyingbird.crypto.scheduler.fifteenMinuteCandle.FifteenMinuteCandleService;
 import com.flyingbird.crypto.scheduler.fiveMinuteCandle.FiveMinuteCandleService;
+import com.flyingbird.crypto.scheduler.hourlyCandle.HourlyCandleService;
 import com.flyingbird.crypto.scheduler.oneMinuteCandle.OneMinuteCandleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -42,10 +43,11 @@ public class MarketDataController {
     private final OneMinuteCandleService oneMinuteCandleService;
     private final FiveMinuteCandleService fiveMinuteCandleService;
     private final FifteenMinuteCandleService fifteenMinuteCandleService;
+    private final HourlyCandleService hourlyCandleService;
 
     @GetMapping("/{timeframe}/crossover-state")
     @Operation(summary = "Get crossover state",
-            description = "Latest EMA-stack crossover signal state for a timeframe (1m / 5m / 15m)")
+            description = "Latest EMA-stack crossover signal state for a timeframe (1m / 5m / 15m / 1h)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "State retrieved",
                     content = @Content(schema = @Schema(implementation = CrossoverStateDto.class))),
@@ -58,13 +60,14 @@ public class MarketDataController {
             case ONE_MINUTE -> oneMinuteCandleService.getCrossoverState();
             case FIVE_MINUTE -> fiveMinuteCandleService.getCrossoverState();
             case FIFTEEN_MINUTE -> fifteenMinuteCandleService.getCrossoverState();
+            case ONE_HOUR -> hourlyCandleService.getCrossoverState();
         };
         return ResponseEntity.ok(state);
     }
 
     @GetMapping("/{timeframe}/last-candle")
     @Operation(summary = "Get last candle",
-            description = "Most recent candle in the buffer for a timeframe (1m / 5m / 15m)")
+            description = "Most recent candle in the buffer for a timeframe (1m / 5m / 15m / 1h)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Candle retrieved",
                     content = @Content(schema = @Schema(implementation = Candle.class))),
@@ -78,6 +81,7 @@ public class MarketDataController {
             case ONE_MINUTE -> oneMinuteCandleService.getLastCandle();
             case FIVE_MINUTE -> fiveMinuteCandleService.getLastCandle();
             case FIFTEEN_MINUTE -> fifteenMinuteCandleService.getLastCandle();
+            case ONE_HOUR -> hourlyCandleService.getLastCandle();
         };
         if (last == null) {
             throw new JobNotFoundException("No candles available yet for timeframe '" + timeframe.getCode() + "'");
@@ -87,7 +91,7 @@ public class MarketDataController {
 
     @GetMapping("/{timeframe}/buffer")
     @Operation(summary = "Get candle buffer",
-            description = "Full candle buffer snapshot for a timeframe (1m / 5m / 15m)")
+            description = "Full candle buffer snapshot for a timeframe (1m / 5m / 15m / 1h)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Buffer retrieved",
                     content = @Content(schema = @Schema(implementation = Candle.class))),
@@ -100,6 +104,7 @@ public class MarketDataController {
             case ONE_MINUTE -> oneMinuteCandleService.getBufferSnapshot();
             case FIVE_MINUTE -> fiveMinuteCandleService.getBufferSnapshot();
             case FIFTEEN_MINUTE -> fifteenMinuteCandleService.getBufferSnapshot();
+            case ONE_HOUR -> hourlyCandleService.getBufferSnapshot();
         };
         return ResponseEntity.ok(snapshot);
     }

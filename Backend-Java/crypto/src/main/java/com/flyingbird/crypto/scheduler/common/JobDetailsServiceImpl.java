@@ -4,6 +4,7 @@ import com.flyingbird.crypto.config.SchedulerProperties;
 import com.flyingbird.crypto.marketdata.model.Candle;
 import com.flyingbird.crypto.scheduler.fifteenMinuteCandle.FifteenMinuteCandleService;
 import com.flyingbird.crypto.scheduler.fiveMinuteCandle.FiveMinuteCandleService;
+import com.flyingbird.crypto.scheduler.hourlyCandle.HourlyCandleService;
 import com.flyingbird.crypto.scheduler.oneMinuteCandle.OneMinuteCandleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class JobDetailsServiceImpl implements JobDetailsService {
     private final OneMinuteCandleService oneMinuteCandleService;
     private final FiveMinuteCandleService fiveMinuteCandleService;
     private final FifteenMinuteCandleService fifteenMinuteCandleService;
+    private final HourlyCandleService hourlyCandleService;
 
     @Override
     public JobDetailsResponseDto getJobDetails(JobId jobId) {
@@ -48,12 +50,14 @@ public class JobDetailsServiceImpl implements JobDetailsService {
             case FB_1M -> oneMinuteCandleService.getCrossoverState();
             case FB_5M -> fiveMinuteCandleService.getCrossoverState();
             case FB_15M -> fifteenMinuteCandleService.getCrossoverState();
+            case FB_1H -> hourlyCandleService.getCrossoverState();
         };
 
         List<Candle> buffer = switch (jobId) {
             case FB_1M -> oneMinuteCandleService.getBufferSnapshot();
             case FB_5M -> fiveMinuteCandleService.getBufferSnapshot();
             case FB_15M -> fifteenMinuteCandleService.getBufferSnapshot();
+            case FB_1H -> hourlyCandleService.getBufferSnapshot();
         };
 
         List<Candle> candles = lastCandles(buffer);

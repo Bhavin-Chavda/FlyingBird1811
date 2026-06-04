@@ -38,12 +38,12 @@ public class JobDetailsController {
 
     @GetMapping("/{timeframe}/details")
     @Operation(summary = "Get full job details",
-            description = "Aggregate details for one scheduler job by timeframe (1m / 5m / 15m): "
-                    + "live status, latest crossover state and the last 5 candles.")
+            description = "Aggregate details for one scheduler job by timeframe (1m / 5m / 15m / 1h): "
+                    + "live status, latest crossover state and the last N candles.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Job details retrieved",
                     content = @Content(schema = @Schema(implementation = JobDetailsResponseDto.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid timeframe (expected 1m, 5m or 15m)"),
+            @ApiResponse(responseCode = "400", description = "Invalid timeframe (expected 1m, 5m, 15m or 1h)"),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT token"),
             @ApiResponse(responseCode = "404", description = "Job with given timeframe not found"),
             @ApiResponse(responseCode = "500", description = "Unexpected server error")

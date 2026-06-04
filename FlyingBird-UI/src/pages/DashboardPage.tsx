@@ -26,6 +26,11 @@ const NAV_ITEMS = [
   { label: 'Analytics',    path: '/dashboard/analytics',    icon: BarChart2 },
 ];
 
+// Sidebar drag-resize bounds (px). Min keeps it usable; max keeps layout intact.
+const MIN_SB_W = 72;
+const MAX_SB_W = 320;
+const DEFAULT_SB_W = 220;
+
 const DashboardPage: React.FC = () => {
   const { userDetails, logout } = useAuth();
   const { showSuccess } = useToast();
@@ -34,8 +39,33 @@ const DashboardPage: React.FC = () => {
   const [collapsed,     setCollapsed]     = useState(false);
   const [mobileOpen,    setMobileOpen]    = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [sidebarWidth,  setSidebarWidth]  = useState(DEFAULT_SB_W);
+  const [resizing,      setResizing]      = useState(false);
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
+
+  // Drag the sidebar's right edge to resize (desktop only — the handle is hidden
+  // on mobile and the overlay sidebar uses a fixed width there).
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setResizing(true);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
+
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.min(MAX_SB_W, Math.max(MIN_SB_W, ev.clientX));
+      setSidebarWidth(next);
+    };
+    const onUp = () => {
+      setResizing(false);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -56,7 +86,9 @@ const DashboardPage: React.FC = () => {
           'sidebar',
           collapsed  ? 'sidebar--collapsed'   : '',
           mobileOpen ? 'sidebar--mobile-open' : '',
+          resizing   ? 'sidebar--resizing'    : '',
         ].join(' ')}
+        style={collapsed ? undefined : { width: sidebarWidth, minWidth: sidebarWidth }}
       >
         {/* Brand */}
         <div className="sb-brand">
@@ -69,7 +101,6 @@ const DashboardPage: React.FC = () => {
 
         {/* Nav */}
         <nav className="sb-nav">
-          {!collapsed && <span className="sb-section-label">Menu</span>}
           {NAV_ITEMS.map(({ label, path, icon: Icon, end }) => (
             <NavLink
               key={path}
@@ -85,6 +116,18 @@ const DashboardPage: React.FC = () => {
               {!collapsed && <span className="sb-nav-label">{label}</span>}
             </NavLink>
           ))}
+
+          {/* Collapse/minimize toggle — sits below the nav items */}
+          <button
+            className="sb-nav-item sb-collapse-btn"
+            onClick={() => setCollapsed((c) => !c)}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed
+              ? <ChevronRight size={18} className="sb-nav-icon" />
+              : <ChevronLeft size={18} className="sb-nav-icon" />}
+            {!collapsed && <span className="sb-nav-label">Collapse</span>}
+          </button>
         </nav>
 
         {/* Footer */}
@@ -108,21 +151,25 @@ const DashboardPage: React.FC = () => {
             {!collapsed && <span>Logout</span>}
           </button>
         </div>
+
+        {/* Drag handle — resize the sidebar (hidden when collapsed / on mobile) */}
+        {!collapsed && (
+          <div
+            className="sb-resize-handle"
+            onMouseDown={startResize}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            title="Drag to resize"
+          />
+        )}
       </aside>
 
       {/* Main content */}
       <div className="db-body">
-        {/* Top bar — sidebar toggle at top-left */}
+        {/* Top bar — mobile only: hamburger opens the sidebar drawer. Hidden on
+            desktop (the sidebar is the sole navigation; collapse lives in it). */}
         <div className="db-topbar">
-          {/* Desktop toggle */}
-          <button
-            className="db-topbar-btn db-topbar-btn--desktop"
-            onClick={() => setCollapsed((c) => !c)}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
-          {/* Mobile hamburger */}
           <button
             className="db-topbar-btn db-topbar-btn--mobile"
             onClick={() => setMobileOpen(true)}
@@ -130,7 +177,6 @@ const DashboardPage: React.FC = () => {
           >
             <Menu size={18} />
           </button>
-          {/* Mobile brand label */}
           <div className="db-topbar-brand">
             <FlyingBirdLogo size={20} />
             <span>FlyingBird</span>

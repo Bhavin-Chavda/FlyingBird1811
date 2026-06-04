@@ -22,9 +22,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Initialise from localStorage so page-refresh keeps the user authenticated.
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => isTokenValid());
 
-  // On page load/refresh: if a valid token exists, fetch user details in the background.
+  // On page load/refresh: if a valid token exists, fetch user details in the
+  // background. If the stored token is missing/expired, purge it so a stale
+  // token from a previous session can never be sent.
   useEffect(() => {
-    if (!isTokenValid()) return;
+    if (!isTokenValid()) {
+      authLogout();
+      return;
+    }
     const username = getUsernameFromToken();
     if (username) {
       getUserDetails(username)

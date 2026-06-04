@@ -1,4 +1,4 @@
-package com.flyingbird.crypto.scheduler.fifteenMinuteCandle;
+package com.flyingbird.crypto.scheduler.hourlyCandle;
 
 import com.flyingbird.crypto.config.MarketDataProperties;
 import com.flyingbird.crypto.marketdata.client.DeltaCandleClient;
@@ -17,19 +17,19 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * 15-minute candle service implementation (15m job business logic only).
+ * Hourly candle service implementation (1h job business logic only).
  * Independent orchestration — shares only the stateless calculation utils.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class FifteenMinuteCandleServiceImpl implements FifteenMinuteCandleService {
+public class HourlyCandleServiceImpl implements HourlyCandleService {
 
-    private static final String RESOLUTION = "15m";
-    private static final int BUCKET_SECONDS = 900;
+    private static final String RESOLUTION = "1h";
+    private static final int BUCKET_SECONDS = 3600;
 
     private final DeltaCandleClient deltaCandleClient;
-    private final FifteenMinuteCandleStore store;
+    private final HourlyCandleStore store;
     private final MailService mailService;
     private final MarketDataProperties props;
 
@@ -41,7 +41,7 @@ public class FifteenMinuteCandleServiceImpl implements FifteenMinuteCandleServic
         CandleCalculationUtils.seedAndFill(history);
         store.seedReplace(history);
         recordInitialCrossover();
-        log.info("[{}] 15m buffer seeded | size={}", Thread.currentThread().getName(), store.size());
+        log.info("[{}] 1h buffer seeded | size={}", Thread.currentThread().getName(), store.size());
     }
 
     @Override
@@ -55,7 +55,7 @@ public class FifteenMinuteCandleServiceImpl implements FifteenMinuteCandleServic
         try {
             latest = deltaCandleClient.getLatestCandle(RESOLUTION, BUCKET_SECONDS);
         } catch (Exception e) {
-            log.warn("[{}] 15m fetch failed, refilling buffer: {}", Thread.currentThread().getName(), e.getMessage());
+            log.warn("[{}] 1h fetch failed, refilling buffer: {}", Thread.currentThread().getName(), e.getMessage());
             seed();
             return store.size();
         }
@@ -86,14 +86,14 @@ public class FifteenMinuteCandleServiceImpl implements FifteenMinuteCandleServic
             double sl = CandleCalculationUtils.min3(last.getLow(), prev.getLow(), prevPrev.getLow());
             double tp = entry + Math.abs(entry - sl) * 3;
             order = CandleCalculationUtils.buildOrder(RESOLUTION, props.getProductId(), "buy", sl, tp);
-            subject = "BUY SIGNAL GENERATED (15m)";
+            subject = "BUY SIGNAL GENERATED (1h)";
         } else {
             double sl = CandleCalculationUtils.max3(last.getHigh(), prev.getHigh(), prevPrev.getHigh());
             double tp = entry - Math.abs(sl - entry) * 3;
             order = CandleCalculationUtils.buildOrder(RESOLUTION, props.getProductId(), "sell", sl, tp);
-            subject = "SELL SIGNAL GENERATED (15m)";
+            subject = "SELL SIGNAL GENERATED (1h)";
         }
-        String details = signal + " SIGNAL GENERATED (15m):\n" + SchedulerTimeUtils.nowIstLabel();
+        String details = signal + " SIGNAL GENERATED (1h):\n" + SchedulerTimeUtils.nowIstLabel();
         mailService.sendSignalEmail(last, order, subject, details);
     }
 

@@ -14,7 +14,8 @@ public enum JobId {
 
     FB_1M("fb_1m_job"),
     FB_5M("fb_5m_job"),
-    FB_15M("fb_15m_job");
+    FB_15M("fb_15m_job"),
+    FB_1H("fb_1h_job");
 
     private final String code;
 
@@ -33,6 +34,7 @@ public enum JobId {
             case FB_1M -> Timeframe.ONE_MINUTE;
             case FB_5M -> Timeframe.FIVE_MINUTE;
             case FB_15M -> Timeframe.FIFTEEN_MINUTE;
+            case FB_1H -> Timeframe.ONE_HOUR;
         };
     }
 
@@ -43,6 +45,6 @@ public enum JobId {
             }
         }
         throw new IllegalArgumentException(
-                "Unknown jobId '" + code + "' (expected fb_1m_job, fb_5m_job or fb_15m_job)");
+                "Unknown jobId '" + code + "' (expected fb_1m_job, fb_5m_job, fb_15m_job or fb_1h_job)");
     }
 }

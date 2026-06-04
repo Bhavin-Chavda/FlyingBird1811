@@ -41,6 +41,8 @@ class JobDetailsControllerTest {
                 .isEqualTo(JobId.FB_5M.getCode());
         assertThat(jobDetailsController.getJobDetails(Timeframe.FIFTEEN_MINUTE).getBody().getJobId())
                 .isEqualTo(JobId.FB_15M.getCode());
+        assertThat(jobDetailsController.getJobDetails(Timeframe.ONE_HOUR).getBody().getJobId())
+                .isEqualTo(JobId.FB_1H.getCode());
     }
 
     @Test

@@ -363,9 +363,27 @@ html, body, #root {
 }
 
 .sidebar--collapsed {
-  width: var(--sb-w-col);
-  min-width: var(--sb-w-col);
+  width: var(--sb-w-col) !important;
+  min-width: var(--sb-w-col) !important;
 }
+
+/* While dragging, drop the width transition so resize tracks the cursor 1:1 */
+.sidebar--resizing { transition: none; }
+
+/* ── Resize handle (right edge) ── */
+.sb-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 210;
+  background: transparent;
+  transition: background 0.15s;
+}
+.sb-resize-handle:hover,
+.sidebar--resizing .sb-resize-handle { background: var(--orange-dim); }
 
 /* ── Brand ── */
 .sb-brand {
@@ -458,6 +476,20 @@ html, body, #root {
 
 .sb-nav-icon  { flex-shrink: 0; }
 .sb-nav-label { overflow: hidden; text-overflow: ellipsis; }
+
+/* Collapse/minimize toggle styled like a nav item, sitting below the menu */
+.sb-collapse-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-family: var(--font);
+  cursor: pointer;
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding-top: 12px;
+}
+.sidebar--collapsed .sb-collapse-btn { justify-content: center; }
 
 /* ── Footer ── */
 .sb-footer {
@@ -575,9 +607,10 @@ html, body, #root {
   min-width: 0;
 }
 
-/* Top bar — always visible, holds sidebar toggle at left */
+/* Top bar — mobile only (hamburger + brand). Hidden on desktop: the sidebar is
+   the sole navigation and the collapse toggle now lives inside the sidebar nav. */
 .db-topbar {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 10px;
   padding: 0 16px;
@@ -887,8 +920,12 @@ html, body, #root {
   /* Backdrop */
   .sb-backdrop { display: block; }
 
-  /* On mobile: show hamburger, hide desktop toggle, show brand */
-  .db-topbar-btn--desktop { display: none; }
+  /* Drag-resize + collapse don't apply to the mobile overlay sidebar */
+  .sb-resize-handle { display: none; }
+  .sb-collapse-btn  { display: none; }
+
+  /* On mobile: show the top bar with hamburger + brand */
+  .db-topbar              { display: flex; }
   .db-topbar-btn--mobile  { display: flex; }
   .db-topbar-brand        { display: flex; }
 
@@ -1421,6 +1458,32 @@ html, body, #root {
 }
 .candle-type.is-green { background: rgba(34,197,94,0.14); color: var(--green); }
 .candle-type.is-red   { background: rgba(239,68,68,0.14); color: var(--red); }
+
+/* ─── Candle raw JSON (modal bottom) ────────────────────────── */
+.candle-json { border: 1px solid var(--border); border-radius: var(--radius); background: var(--dark2); }
+.candle-json > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--white-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  list-style: none;
+}
+.candle-json > summary:hover { color: var(--orange); }
+.candle-json[open] > summary { border-bottom: 1px solid var(--border); }
+.candle-json-pre {
+  margin: 0;
+  padding: 12px;
+  max-height: 260px;
+  overflow: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--white);
+  white-space: pre;
+}
 
 /* ─── Candlestick chart (SVG) ───────────────────────────────── */
 .candle-chart-wrap {
