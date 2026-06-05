@@ -79,7 +79,14 @@ market:
 # Crossover signal email (migrated from mailor.py). Disabled by default.
 notification:
   email:
-    enabled: ${EMAIL_ENABLED:true}
+    enabled: ${EMAIL_ENABLED:true}          # global master switch for signal emails
+    # Per-timeframe signal-email toggles (default true → unchanged behavior).
+    # When false, the signal is still detected/recorded but no email is sent for that job.
+    signal:
+      one-minute: ${SIGNAL_EMAIL_1M:false}     # 1m signal emails disabled for now
+      five-minute: ${SIGNAL_EMAIL_5M:true}
+      fifteen-minute: ${SIGNAL_EMAIL_15M:true}
+      one-hour: ${SIGNAL_EMAIL_1H:true}
     from: ${EMAIL_FROM:jaydipvadher111@gmail.com}
     to: ${EMAIL_TO:flyingbird1b@gmail.com}
     cc: ${EMAIL_CC:}
