@@ -1,6 +1,7 @@
 package com.flyingbird.crypto.scheduler.fifteenMinuteCandle;
 
 import com.flyingbird.crypto.config.MarketDataProperties;
+import com.flyingbird.crypto.config.NotificationProperties;
 import com.flyingbird.crypto.marketdata.client.DeltaCandleClient;
 import com.flyingbird.crypto.marketdata.model.Candle;
 import com.flyingbird.crypto.marketdata.model.OrderRequest;
@@ -32,6 +33,7 @@ public class FifteenMinuteCandleServiceImpl implements FifteenMinuteCandleServic
     private final FifteenMinuteCandleStore store;
     private final MailService mailService;
     private final MarketDataProperties props;
+    private final NotificationProperties notificationProps;
 
     @Override
     public void seed() {
@@ -94,7 +96,12 @@ public class FifteenMinuteCandleServiceImpl implements FifteenMinuteCandleServic
             subject = "SELL SIGNAL GENERATED (15m)";
         }
         String details = signal + " SIGNAL GENERATED (15m):\n" + SchedulerTimeUtils.nowIstLabel();
-        mailService.sendSignalEmail(last, order, subject, details);
+        // Signal is fully calculated above; only the mail send is gated by the flag.
+        if (notificationProps.isEmailEnabledFor(RESOLUTION)) {
+            mailService.sendSignalEmail(last, order, subject, details);
+        } else {
+            log.info("Signal email disabled for timeframe {}. Signal generated but email was not sent.", RESOLUTION);
+        }
     }
 
     /**
