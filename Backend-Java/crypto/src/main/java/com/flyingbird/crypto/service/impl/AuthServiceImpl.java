@@ -1,11 +1,14 @@
 package com.flyingbird.crypto.service.impl;
 
+import com.flyingbird.crypto.dto.AdminRegisterUserRequestDto;
 import com.flyingbird.crypto.dto.AuthResponseDto;
 import com.flyingbird.crypto.dto.LoginRequestDto;
 import com.flyingbird.crypto.dto.RegisterRequestDto;
 import com.flyingbird.crypto.entity.User;
+import com.flyingbird.crypto.exception.ForbiddenAccessException;
 import com.flyingbird.crypto.exception.InvalidCredentialsException;
 import com.flyingbird.crypto.exception.UserAlreadyExistsException;
+import com.flyingbird.crypto.exception.UserNotFoundException;
 import com.flyingbird.crypto.repository.UserRepository;
 import com.flyingbird.crypto.service.AuthService;
 import com.flyingbird.crypto.util.JwtUtil;
@@ -97,9 +100,12 @@ public class AuthServiceImpl implements AuthService {
             // Get authenticated user details
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-            // Get user from repository to access additional fields (role)
-            User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new InvalidCredentialsException("User not found"));
+            // Get user from repository to access additional fields (role).
+            // Fetch ENABLED users only — a disabled account must never receive a token.
+            // (Spring's DaoAuthenticationProvider also rejects disabled users via
+            // CustomUserDetailsService.disabled(...); this is an explicit second guard.)
+            User user = userRepository.findByUsernameAndEnabledTrue(username)
+                    .orElseThrow(() -> new InvalidCredentialsException("User not found or disabled"));
 
             // Generate JWT token
             String jwtToken = jwtUtil.generateToken(userDetails);
@@ -187,6 +193,87 @@ public class AuthServiceImpl implements AuthService {
                 .username(username)
                 .role(role)
                 .message("Registration successful")
+                .build();
+    }
+
+    /**
+     * Admin-initiated user registration. ADMIN authorization is enforced at the controller
+     * ({@code @PreAuthorize("hasRole('ADMIN')")}); here we only apply the same persistence
+     * rules as {@link #register} with an explicit, validated role.
+     */
+    @Override
+    public AuthResponseDto registerByAdmin(AdminRegisterUserRequestDto request) {
+        String username = request.getUsername();
+        // Role is validated (USER/ADMIN) by the DTO @Pattern; normalize to upper-case for storage.
+        String role = request.getRole().trim().toUpperCase();
+
+        log.info("Admin registration attempt | username={} | role={}", username, role);
+
+        // Enforce unique username (DB constraint + this guard).
+        if (userRepository.existsByUsername(username)) {
+            log.warn("Admin registration rejected, username already exists | username={}", username);
+            throw new UserAlreadyExistsException("Username '" + username + "' already exists");
+        }
+
+        // Hash password with the existing encoder before storing (never store plain text).
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+
+        User newUser = User.builder()
+                .username(username)
+                .password(hashedPassword)
+                .role(role)
+                .enabled(true)
+                .build();
+
+        userRepository.save(newUser);
+
+        log.info("Admin registered user successfully | username={} | role={}", username, role);
+
+        return AuthResponseDto.builder()
+                .username(username)
+                .role(role)
+                .message("User registered successfully")
+                .build();
+    }
+
+    /**
+     * Admin-initiated user disable. ADMIN authorization is enforced at the controller.
+     * ADMIN-role users cannot be disabled; idempotent if the user is already disabled.
+     */
+    @Override
+    public AuthResponseDto disableUser(String username) {
+        log.info("Admin disable-user attempt | username={}", username);
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    log.warn("Disable rejected, user not found | username={}", username);
+                    return new UserNotFoundException("User '" + username + "' not found");
+                });
+
+        // Never allow disabling an ADMIN account.
+        if (user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().trim())) {
+            log.warn("Disable rejected, target is ADMIN | username={}", username);
+            throw new ForbiddenAccessException("ADMIN users cannot be disabled");
+        }
+
+        if (!user.isEnabled()) {
+            log.info("User already disabled | username={}", username);
+            return AuthResponseDto.builder()
+                    .username(user.getUsername())
+                    .role(user.getRole())
+                    .message("User is already disabled")
+                    .build();
+        }
+
+        user.setEnabled(false);
+        userRepository.save(user);
+
+        log.info("User disabled successfully | username={}", username);
+
+        return AuthResponseDto.builder()
+                .username(user.getUsername())
+                .role(user.getRole())
+                .message("User disabled successfully")
                 .build();
     }
 }

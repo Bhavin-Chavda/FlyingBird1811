@@ -28,3 +28,15 @@ export interface UserDetailsResponseDto {
   role: string;
   enabled: boolean;
 }
+
+// Mirrors backend AdminRegisterUserRequestDto (POST /api/admin/users/register).
+export interface AdminRegisterUserRequestDto {
+  username: string;
+  password: string;
+  role: string; // "USER" | "ADMIN"
+}
+
+// Mirrors backend AdminDisableUserRequestDto (POST /api/admin/users/disable).
+export interface AdminDisableUserRequestDto {
+  username: string;
+}

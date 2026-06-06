@@ -1,5 +1,6 @@
 package com.flyingbird.crypto.service;
 
+import com.flyingbird.crypto.dto.AdminRegisterUserRequestDto;
 import com.flyingbird.crypto.dto.AuthResponseDto;
 import com.flyingbird.crypto.dto.LoginRequestDto;
 import com.flyingbird.crypto.dto.RegisterRequestDto;
@@ -52,8 +53,36 @@ public interface AuthService {
      * 
      * @param registerRequestDto - username and password
      * @return AuthResponseDto with success message
-     * @throws UserAlreadyExistsException if username already exists
+     * @throws RegisterRequestDto if username already exists
      */
     AuthResponseDto register(RegisterRequestDto registerRequestDto);
+
+    /**
+     * Register a user on behalf of an ADMIN (protected flow).
+     *
+     * <p>Same persistence rules as {@link #register} (unique username, BCrypt password,
+     * enabled=true) but the {@code role} is REQUIRED and explicitly chosen by the admin
+     * (USER or ADMIN, normalized to upper-case). Authorization (ADMIN-only) is enforced at
+     * the controller via {@code @PreAuthorize}; this method assumes the caller is authorized.</p>
+     *
+     * @param request - username, password and role chosen by the admin
+     * @return AuthResponseDto with success message (no token issued)
+     * @throws com.flyingbird.crypto.exception.UserAlreadyExistsException if username already exists
+     */
+    AuthResponseDto registerByAdmin(AdminRegisterUserRequestDto request);
+
+    /**
+     * Disable a user (ADMIN only, protected flow) — sets {@code enabled=false} so the account
+     * can no longer authenticate. Authorization (ADMIN-only) is enforced at the controller.
+     *
+     * <p>Business rules: the target must exist (else 404) and must NOT have the ADMIN role
+     * (ADMIN accounts cannot be disabled → 403). Idempotent if already disabled.</p>
+     *
+     * @param username - the user to disable
+     * @return AuthResponseDto with success message
+     * @throws com.flyingbird.crypto.exception.UserNotFoundException if the username doesn't exist
+     * @throws com.flyingbird.crypto.exception.ForbiddenAccessException if the target is an ADMIN
+     */
+    AuthResponseDto disableUser(String username);
 }
 

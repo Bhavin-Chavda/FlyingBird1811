@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import OverviewPage from './pages/dashboard/OverviewPage';
 import JobsDetailsPage from './pages/dashboard/JobsDetailsPage';
+import PaperTradingPage from './pages/dashboard/PaperTradingPage';
 import TradesPage from './pages/dashboard/TradesPage';
 import HistoryPage from './pages/dashboard/HistoryPage';
 import AnalyticsPage from './pages/dashboard/AnalyticsPage';
@@ -27,6 +28,7 @@ function App() {
             >
               <Route index element={<OverviewPage />} />
               <Route path="jobs-details" element={<JobsDetailsPage />} />
+              <Route path="paper-trading" element={<PaperTradingPage />} />
               <Route path="trades"       element={<TradesPage />} />
               <Route path="history"      element={<HistoryPage />} />
               <Route path="analytics"    element={<AnalyticsPage />} />
