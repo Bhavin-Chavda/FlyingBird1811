@@ -25,6 +25,11 @@ public enum ChartPatternName {
     BULL_FLAG(TradeDirection.BULLISH, true),
     RECTANGLE_BREAKOUT_UP(TradeDirection.BULLISH, true),
 
+    // ---- Indicator-based (NOT a chart pattern; bidirectional). The actual trade
+    // direction is decided per-signal at creation time, so the `direction` below is
+    // only a nominal placeholder and is not used as authoritative. ----
+    DTC_INDICATOR(TradeDirection.BULLISH, false),
+
     // ---- Phase 2 (reserved; not yet detected) ----
     TRIPLE_TOP(TradeDirection.BEARISH, false),
     TRIPLE_BOTTOM(TradeDirection.BULLISH, false),

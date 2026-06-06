@@ -17,6 +17,21 @@ public class PaperTradingProperties {
 
     private PatternDetector patternDetector = new PatternDetector();
     private Evaluator evaluator = new Evaluator();
+    private DtcIndicator dtcIndicator = new DtcIndicator();
+
+    @Data
+    public static class DtcIndicator {
+        /** Per-timeframe enable flags for DTC/crossover paper trades (all default false). */
+        private Enabled enabled = new Enabled();
+
+        @Data
+        public static class Enabled {
+            private boolean oneMinute = false;
+            private boolean fiveMinute = false;
+            private boolean fifteenMinute = false;
+            private boolean oneHour = false;
+        }
+    }
 
     @Data
     public static class Evaluator {
@@ -58,6 +73,17 @@ public class PaperTradingProperties {
     /** Whether pattern detection is enabled for the given timeframe. */
     public boolean isDetectionEnabled(Timeframe timeframe) {
         PatternDetector.Enabled e = patternDetector.getEnabled();
+        return switch (timeframe) {
+            case ONE_MINUTE -> e.isOneMinute();
+            case FIVE_MINUTE -> e.isFiveMinute();
+            case FIFTEEN_MINUTE -> e.isFifteenMinute();
+            case ONE_HOUR -> e.isOneHour();
+        };
+    }
+
+    /** Whether DTC/crossover paper-trade creation is enabled for the given timeframe. */
+    public boolean isDtcEnabled(Timeframe timeframe) {
+        DtcIndicator.Enabled e = dtcIndicator.getEnabled();
         return switch (timeframe) {
             case ONE_MINUTE -> e.isOneMinute();
             case FIVE_MINUTE -> e.isFiveMinute();

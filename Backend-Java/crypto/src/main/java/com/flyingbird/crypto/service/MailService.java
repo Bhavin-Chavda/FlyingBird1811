@@ -1,7 +1,6 @@
 package com.flyingbird.crypto.service;
 
 import com.flyingbird.crypto.marketdata.model.Candle;
-import com.flyingbird.crypto.marketdata.model.OrderRequest;
 
 /**
  * Mail Service
@@ -11,8 +10,10 @@ import com.flyingbird.crypto.marketdata.model.OrderRequest;
 public interface MailService {
 
     /**
-     * Send a signal email with the triggering candle and the built order.
+     * Send a signal email with the triggering candle and a signal payload object
+     * (e.g. the DTC trade plan / {@code PatternDetectionResultDto}). The payload is
+     * generic ({@link Object}) so any DTO can be included; it may be {@code null}.
      * No-op (logged) when email is disabled or SMTP is not configured.
      */
-    void sendSignalEmail(Candle candle, OrderRequest order, String subject, String details);
+    void sendSignalEmail(Candle candle, Object object, String subject, String details);
 }

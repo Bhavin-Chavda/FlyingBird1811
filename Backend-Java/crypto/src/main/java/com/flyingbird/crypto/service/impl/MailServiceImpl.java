@@ -2,7 +2,6 @@ package com.flyingbird.crypto.service.impl;
 
 import com.flyingbird.crypto.config.NotificationProperties;
 import com.flyingbird.crypto.marketdata.model.Candle;
-import com.flyingbird.crypto.marketdata.model.OrderRequest;
 import com.flyingbird.crypto.service.MailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -16,7 +15,7 @@ import java.util.List;
  * Mail Service Implementation
  *
  * Migrated from Python mailor.py (send_object_email). Sends a plain-text email
- * summarising the triggering candle and the built bracket order.
+ * summarising the triggering candle and a signal payload object (the DTC trade plan).
  *
  * JavaMailSender is injected via ObjectProvider so the application still boots
  * when SMTP is not configured; sending is gated on notification.email.enabled.
@@ -37,7 +36,7 @@ public class MailServiceImpl implements MailService {
     }
 
     @Override
-    public void sendSignalEmail(Candle candle, OrderRequest order, String subject, String details) {
+    public void sendSignalEmail(Candle candle, Object object, String subject, String details) {
         if (!props.isEnabled()) {
             log.info("Email disabled — skipping signal email | subject={}", subject);
             return;
@@ -67,7 +66,7 @@ public class MailServiceImpl implements MailService {
                 message.setBcc(bcc.toArray(new String[0]));
             }
             message.setSubject(props.getSubjectPrefix() + subject);
-            message.setText(buildBody(candle, order, details));
+            message.setText(buildBody(candle, object, details));
 
             sender.send(message);
             log.info("Signal email sent | subject={} | recipients={}", subject, props.getTo());
@@ -77,14 +76,16 @@ public class MailServiceImpl implements MailService {
         }
     }
 
-    private String buildBody(Candle candle, OrderRequest order, String details) {
+    private String buildBody(Candle candle, Object object, String details) {
         StringBuilder sb = new StringBuilder();
         sb.append("Automatic notification\n\n");
         if (details != null && !details.isBlank()) {
             sb.append(details).append("\n\n");
         }
         sb.append("CANDLE:\n").append(candle).append("\n\n");
-        sb.append("----- ORDER -----\n").append(order);
+        if (object != null) {
+            sb.append("----- TRADE PLAN -----\n").append(object);
+        }
         return sb.toString();
     }
 }
