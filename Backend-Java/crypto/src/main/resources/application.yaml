@@ -28,7 +28,9 @@ spring:
     init:
       mode: always
       continue-on-error: true
-      schema-locations: classpath:org/springframework/batch/core/schema-mysql.sql
+      schema-locations:
+        - classpath:org/springframework/batch/core/schema-mysql.sql
+        - classpath:db/paper-trading-schema.sql
 
   jwt:
     secret: "mySecretKeyForJWTTokenGenerationAndValidation12345678901234567890"
@@ -92,3 +94,29 @@ notification:
     cc: ${EMAIL_CC:}
     bcc: ${EMAIL_BCC:}
     subject-prefix: "[FlyingBird] "
+
+# Paper-trading chart-pattern detection. OFF by default for every timeframe — detection
+# only runs where explicitly enabled. Trade evaluation of OPEN trades is independent of
+# these flags (it always runs on each new 1m candle). Tables are created by spring.sql.init
+# (classpath:db/paper-trading-schema.sql); ddl-auto stays 'none'.
+paper-trading:
+  pattern-detector:
+    enabled:
+      one-minute: ${PATTERN_DETECT_1M:false}      # 1m detection off (noisy)
+      five-minute: ${PATTERN_DETECT_5M:true}
+      fifteen-minute: ${PATTERN_DETECT_15M:true}
+      one-hour: ${PATTERN_DETECT_1H:true}
+    async-enabled: true
+    min-confidence: 0.60
+    duplicate-window-candles: 10
+    use-volume-confirmation: false
+    atr-period: 14
+    pivot-left: 3
+    pivot-right: 3
+    conservative-stops: false
+  evaluator:
+    # Recovery: after downtime/failure, OPEN trades not evaluated for longer than
+    # stale-open-trade-minutes are DISCARDED (not CLOSED) on the evaluator's next run,
+    # since the latest price may be far past the trade's valid evaluation window.
+    discard-stale-open-trades-enabled: ${PT_DISCARD_STALE_ENABLED:true}
+    stale-open-trade-minutes: ${PT_STALE_OPEN_MINUTES:60}

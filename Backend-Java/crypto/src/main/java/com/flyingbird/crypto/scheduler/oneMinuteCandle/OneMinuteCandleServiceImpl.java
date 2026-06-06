@@ -2,6 +2,8 @@ package com.flyingbird.crypto.scheduler.oneMinuteCandle;
 
 import com.flyingbird.crypto.config.MarketDataProperties;
 import com.flyingbird.crypto.config.NotificationProperties;
+import com.flyingbird.crypto.papertrading.service.PaperTradingOrchestrator;
+import com.flyingbird.crypto.scheduler.common.Timeframe;
 import com.flyingbird.crypto.marketdata.client.DeltaCandleClient;
 import com.flyingbird.crypto.marketdata.model.Candle;
 import com.flyingbird.crypto.marketdata.model.OrderRequest;
@@ -34,6 +36,7 @@ public class OneMinuteCandleServiceImpl implements OneMinuteCandleService {
     private final MailService mailService;
     private final MarketDataProperties props;
     private final NotificationProperties notificationProps;
+    private final PaperTradingOrchestrator paperTradingOrchestrator;
 
     @Override
     public void seed() {
@@ -73,6 +76,8 @@ public class OneMinuteCandleServiceImpl implements OneMinuteCandleService {
         if (transition && snap.size() >= 3) {
             emitSignal(signal, snap);
         }
+        // Paper-trading hook: pattern detection (if enabled) + evaluate OPEN trades (1m only). Never breaks the job.
+        paperTradingOrchestrator.onNewClosedCandle(Timeframe.ONE_MINUTE, snap);
         return store.size();
     }
 
