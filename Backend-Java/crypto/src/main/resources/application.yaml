@@ -114,6 +114,14 @@ paper-trading:
     pivot-left: 3
     pivot-right: 3
     conservative-stops: false
+  # DTC/crossover paper trades: one PaperTrade per emitSignal (crossover transition) per
+  # timeframe. OFF by default for every timeframe — enable per timeframe to start creating them.
+  dtc-indicator:
+    enabled:
+      one-minute: ${DTC_PAPER_1M:true}
+      five-minute: ${DTC_PAPER_5M:true}
+      fifteen-minute: ${DTC_PAPER_15M:true}
+      one-hour: ${DTC_PAPER_1H:true}
   evaluator:
     # Recovery: after downtime/failure, OPEN trades not evaluated for longer than
     # stale-open-trade-minutes are DISCARDED (not CLOSED) on the evaluator's next run,
